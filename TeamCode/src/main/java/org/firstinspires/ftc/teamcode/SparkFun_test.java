@@ -5,14 +5,19 @@
 */
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.robot.Robot;
 
+import org.firstinspires.ftc.robotcore.external.JavaUtil;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 /*
  * This OpMode illustrates how to use the SparkFun Qwiic Optical Tracking Odometry Sensor (OTOS)
@@ -24,11 +29,15 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
  *
  * See the sensor's product page: https://www.sparkfun.com/products/24904
  */
-@Autonomous(name = "SparkFun straight", group = "Sensor")
+@Autonomous(name = "SparkFun straight", group = "Sensor", preselectTeleOp="Sensor: Limelight3A_test")
 //@Disabled
 public class SparkFun_test extends LinearOpMode {
     // Create an instance of the sensor
     SparkFunOTOS myOtos;
+    private IMU imu;
+    private boolean useIMU = true;
+    private double currAngle = 0.0;
+    private double lastAngle = 0.0;
     private DcMotor LBdrive;
     private DcMotor RBdrive;
     private DcMotor LFdrive;
@@ -45,6 +54,8 @@ public class SparkFun_test extends LinearOpMode {
 
         // Get a reference to the sensor
         myOtos = hardwareMap.get(SparkFunOTOS.class, "sensor_otos");
+        imu = hardwareMap.get(IMU.class, "imu");
+
         LBdrive = hardwareMap.get(DcMotor.class, "LBdrive");
         RBdrive = hardwareMap.get(DcMotor.class, "RBdrive");
         LFdrive = hardwareMap.get(DcMotor.class, "LFdrive");
@@ -61,6 +72,7 @@ public class SparkFun_test extends LinearOpMode {
 
         // All the configuration for the OTOS is done in this helper method, check it out!
         configureOtos();
+        Init_IMU();
 
         // Wait for the start button to be pressed
         waitForStart();
@@ -93,9 +105,23 @@ public class SparkFun_test extends LinearOpMode {
 
             // Update the telemetry on the driver station
             telemetry.update();
-            moveStraightWithVelocity(24, 200, 1);
-            SpinRobot(180, "RIGHT");
-            moveStraightWithVelocity(24, 200, 1);
+           // moveStraightWithVelocity(28, 200, 1);
+            //sleep(1000);
+            //moveStraightWithVelocity(-9, 200, 1);
+            //sleep(1000);
+            //strafeUsingVelocity(48,200, 1);
+            //sleep(1000);
+            //moveStraightWithVelocity(-16, 200, 1);
+            //sleep(1000);
+            SpinRobot(180);
+            //SpinRobot(180, "RIGHT");
+            sleep(1000);
+            SpinRobot(180);
+            sleep(1000);
+
+            SpinRobot(180);
+            sleep(1000);
+
 
             break;
         }
@@ -186,84 +212,6 @@ public class SparkFun_test extends LinearOpMode {
 
 
 
-    private void SpinRobot(int degreesToTurn, String directionToTurn) {
-
-        int turningRight = 0;
-        int turningLeft = 0;
-
-        LBdrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        RBdrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        LFdrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        RFdrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-        if (directionToTurn.equals("RIGHT")){
-            degreesToTurn = -1 * degreesToTurn;
-        }
-
-        SparkFunOTOS.Pose2D pos = myOtos.getPosition();
-        double currentOrientation = pos.h;
-
-        degreesToTurn = (int)currentOrientation + degreesToTurn;
-
-       /* if( directionToTurn.equals("RIGHT")){
-            degreesToTurn = (int)currentOrientation - degreesToTurn;
-            telemetry.addData("DEGREES_TO_TURN", degreesToTurn);
-            telemetry.addData("CURRENT ORIENTATION", currentOrientation);
-            telemetry.update();
-            sleep(2000);
-
-        }else if (directionToTurn.equals("LEFT")){
-            degreesToTurn = (int)currentOrientation + degreesToTurn;
-            telemetry.addData("DEGREES_TO_TURN", degreesToTurn);
-            telemetry.addData("CURRENT ORIENTATION", currentOrientation);
-            telemetry.update();
-            sleep(2000);
-        } */
-        while (opModeIsActive()){
-            pos = myOtos.getPosition();
-            telemetry.addData("CURRENT ORIENTATION", Math.floor(pos.h));
-
-            if( degreesToTurn < Math.floor(pos.h)  && directionToTurn.equals("RIGHT")){
-                telemetry.addData("CURRENT ORIENTATION", currentOrientation);
-                telemetry.update();
-
-                // ensure that power to the wheels is set only once per turn
-                if(turningRight == 0) {
-
-                    telemetry.addData("SPINNING RIGHT", "FULL POWER");
-                    telemetry.addData("CURRENT ORIENTATION", Math.floor(pos.h));
-
-                    telemetry.update();
-                    ((DcMotorEx) LBdrive).setVelocity(200);
-                    ((DcMotorEx) RBdrive).setVelocity(-200);
-                    ((DcMotorEx) LFdrive).setVelocity(200);
-                    ((DcMotorEx) RFdrive).setVelocity(-200);
-                    turningRight = 1;
-                }
-            } else if (degreesToTurn > Math.floor(pos.h) && directionToTurn.equals("LEFT")) {
-                telemetry.addData("CURRENT ORIENTATION", Math.floor(pos.h));
-                telemetry.update();
-                // ensure that power to the wheels is set only once per turn
-                if (turningLeft == 0){
-                    telemetry.addData("SPINNING LEFT", "FULL POWER");
-                    telemetry.update();
-                    ((DcMotorEx) LBdrive).setVelocity(-200);
-                    ((DcMotorEx) RBdrive).setVelocity(200);
-                    ((DcMotorEx) LFdrive).setVelocity(-200);
-                    ((DcMotorEx) RFdrive).setVelocity(200);
-                    turningLeft = 1;
-                }
-            } else {
-                LBdrive.setPower(0);
-                RBdrive.setPower(0);
-                LFdrive.setPower(0);
-                RFdrive.setPower(0);
-                break;
-            }
-
-        }
-
-    }
     /**
      * this function will move the robot in a straight line to
      * the distance specified by"distanceInInches" input variable
@@ -310,5 +258,263 @@ public class SparkFun_test extends LinearOpMode {
         RFdrive.setPower(0);
     }
 
+    /**
+     * this function will move the robot in a straight line to the
+     * distance specified by "distanceInInches" input variable
+     */
+    private void strafeUsingVelocity(int distanceInInches, int velocityInTPS, int speedFactor) {
+        int newStrafingVelocity;
 
+        // If distanceInInches is negative, strafe left - else strage right
+        // InputVariable : distanceInInches - amount to strafe
+        // InputVariable : velocityInTPS - velocity value in motor tics per second - should be integer value
+        // Input Variable : speedFactor - factor to control speed - this function will multiply the velocity with SpeedFactor
+        LBdrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        RBdrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        LFdrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        RFdrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        RFdrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        LFdrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        RBdrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        LBdrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        // from edge of A4 tile to the center stripe is 22.5 inches
+        double rotationsNeeded = distanceInInches / circumference;
+        int driveTargetPosition = (int) (rotationsNeeded * encoderTickCount);
+        if (distanceInInches > 0) {
+            telemetry.addData("STRAFING", ">>>>>>>>>>");
+            telemetry.update();
+            LBdrive.setTargetPosition(-1 * driveTargetPosition);
+            RBdrive.setTargetPosition(driveTargetPosition);
+            LFdrive.setTargetPosition(driveTargetPosition);
+            RFdrive.setTargetPosition(-1 * driveTargetPosition);
+        } else if (distanceInInches < 0) {
+            telemetry.addData("STRAFING", "<<<<<<<<<");
+            telemetry.update();
+            LBdrive.setTargetPosition(-1 * driveTargetPosition);
+            RBdrive.setTargetPosition(driveTargetPosition);
+            LFdrive.setTargetPosition(driveTargetPosition);
+            RFdrive.setTargetPosition(-1 * driveTargetPosition);
+        }
+        LBdrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        RBdrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        LFdrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        RFdrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        newStrafingVelocity = velocityInTPS * speedFactor;
+        ((DcMotorEx) LBdrive).setVelocity(newStrafingVelocity);
+        ((DcMotorEx) RBdrive).setVelocity(newStrafingVelocity);
+        ((DcMotorEx) LFdrive).setVelocity(newStrafingVelocity);
+        ((DcMotorEx) RFdrive).setVelocity(newStrafingVelocity);
+        while (LBdrive.isBusy() || RBdrive.isBusy() || LFdrive.isBusy() || RFdrive.isBusy()) {
+            if (distanceInInches < 0) {
+                telemetry.addData("STRAFING LEFT", distanceInInches);
+                telemetry.update();
+            } else if (distanceInInches > 0) {
+                telemetry.addData("STRAFING RIGHT", distanceInInches);
+                telemetry.update();
+            }
+        }
+        LBdrive.setPower(0);
+        RBdrive.setPower(0);
+        LFdrive.setPower(0);
+        RFdrive.setPower(0);
+    }
+
+    public void resetAngle(){
+
+        if (useIMU == true){
+            //use IMU go get angel
+            YawPitchRollAngles orientationYPR;
+            orientationYPR = imu.getRobotYawPitchRollAngles();
+            lastAngle = orientationYPR.getYaw(AngleUnit.DEGREES);
+            currAngle = 0;
+
+        } else {
+            SparkFunOTOS.Pose2D pos = myOtos.getPosition();
+            lastAngle = pos.h;
+            currAngle = 0;
+        }
+    }
+
+    public double getAngle(){
+
+        double orientation = 0;
+
+        if (useIMU == true){
+            //use IMU go get angle
+            YawPitchRollAngles orientationYPR;
+            orientationYPR = imu.getRobotYawPitchRollAngles();
+            orientation = orientationYPR.getYaw(AngleUnit.DEGREES);
+
+        } else{
+            SparkFunOTOS.Pose2D pos = myOtos.getPosition();
+            orientation = pos.h;
+        }
+
+        double deltaAngle = orientation - lastAngle;
+
+        //since angles are from -180 to 180, we want to normalize the angle
+        if(deltaAngle > 180){
+            deltaAngle = deltaAngle - 360;
+
+        }else if(deltaAngle <= -180){
+            deltaAngle = deltaAngle + 360;
+        }
+        currAngle = currAngle + deltaAngle;
+        lastAngle = orientation;
+
+        return currAngle;
+    }
+
+    /*
+    Spin the robot relative to its current position
+     */
+
+    private void SpinRobot(double degrees){
+        resetAngle();
+
+        double error = degrees; //how far away you are from your target angle
+
+        /* as long as the difference between the desired angle and current angle is > 2,
+        keep turning */
+        boolean rotating = false;
+        while (opModeIsActive() && Math.abs(error) > 2){
+
+            double motorVelocity = 0;
+            //reduce the velocity as we approach the target
+            if( Math.abs(error) <= 20){
+                if (error < 0){
+                    motorVelocity = -5;
+                } else {
+                    motorVelocity = 5;
+                }
+            } else {
+
+                if (error < 0) {
+                    motorVelocity = -300;
+                } else {
+                    motorVelocity = 300;
+                }
+            }
+
+            if( false == rotating){
+                setVelocity(-motorVelocity, motorVelocity, -motorVelocity, motorVelocity);
+                rotating = true;
+            }
+
+            error = degrees - getAngle();
+            telemetry.addData("Motor velocity", motorVelocity);
+            telemetry.addData("Using IMU", useIMU);
+            telemetry.addData("How Far to rotate:", error);
+            telemetry.addData("Current Angle:", getAngle());
+            telemetry.update();
+
+        }
+
+        setAllPower(0);
+
+    }
+
+    public void setVelocity(double lF, double rF, double lB, double rB){
+
+        ((DcMotorEx) LFdrive).setVelocity(lF);
+        ((DcMotorEx) RFdrive).setVelocity(rF);
+        ((DcMotorEx) LBdrive).setVelocity(lB);
+        ((DcMotorEx) RBdrive).setVelocity(rB);
+    }
+
+    public void setAllPower(double power){
+        LBdrive.setPower(0);
+        RBdrive.setPower(0);
+        LFdrive.setPower(0);
+        RFdrive.setPower(0);
+    }
+
+/*
+    OLD Spin Robot - may be buggy - use SpinRobot instead
+ */
+    private void SpinRobotOLD(int degreesToTurn, String directionToTurn) {
+
+        int turningRight = 0;
+        int turningLeft = 0;
+
+        LBdrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        RBdrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        LFdrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        RFdrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        if (directionToTurn.equals("RIGHT")){
+            degreesToTurn = -1 * degreesToTurn;
+        }
+
+        SparkFunOTOS.Pose2D pos = myOtos.getPosition();
+        double currentOrientation = pos.h;
+
+        degreesToTurn = (int)currentOrientation + degreesToTurn;
+
+
+        while (opModeIsActive()){
+            pos = myOtos.getPosition();
+            telemetry.addData("CURRENT ORIENTATION", Math.floor(pos.h));
+
+            if( degreesToTurn < Math.floor(pos.h)  && directionToTurn.equals("RIGHT")){
+                telemetry.addData("CURRENT ORIENTATION", currentOrientation);
+                telemetry.update();
+
+                // ensure that power to the wheels is set only once per turn
+                if(turningRight == 0) {
+
+                    telemetry.addData("SPINNING RIGHT", "FULL POWER");
+                    telemetry.addData("CURRENT ORIENTATION", Math.floor(pos.h));
+
+                    telemetry.update();
+                    ((DcMotorEx) LBdrive).setVelocity(200);
+                    ((DcMotorEx) RBdrive).setVelocity(-200);
+                    ((DcMotorEx) LFdrive).setVelocity(200);
+                    ((DcMotorEx) RFdrive).setVelocity(-200);
+                    turningRight = 1;
+                }
+            } else if (degreesToTurn > Math.floor(pos.h) && directionToTurn.equals("LEFT")) {
+                telemetry.addData("CURRENT ORIENTATION", Math.floor(pos.h));
+                telemetry.update();
+                // ensure that power to the wheels is set only once per turn
+                if (turningLeft == 0){
+                    telemetry.addData("SPINNING LEFT", "FULL POWER");
+                    telemetry.update();
+                    ((DcMotorEx) LBdrive).setVelocity(-200);
+                    ((DcMotorEx) RBdrive).setVelocity(200);
+                    ((DcMotorEx) LFdrive).setVelocity(-200);
+                    ((DcMotorEx) RFdrive).setVelocity(200);
+                    turningLeft = 1;
+                }
+            } else {
+                LBdrive.setPower(0);
+                RBdrive.setPower(0);
+                LFdrive.setPower(0);
+                RFdrive.setPower(0);
+                break;
+            }
+
+        }
+
+    }
+
+    private void Init_IMU() {
+        IMU.Parameters IMUParameter;
+
+        // Create a Parameters object for use with an IMU in a REV Robotics Control Hub or
+        // Expansion Hub, specifying the hub's orientation on the robot via the direction that
+        // the REV Robotics logo is facing and the direction that the USB ports are facing.
+        IMUParameter = new IMU.Parameters(new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.UP, RevHubOrientationOnRobot.UsbFacingDirection.RIGHT));
+        // This will use IMU gyroscope and accelerometer
+        // to calculate the relative orientation of the hub and thus the robot
+        // Warn driver this make take several seconds
+        telemetry.addData("Status", "Init IMU .... Please Wait");
+        telemetry.update();
+        // Initialize IMU using parameter object
+        // Initialize the IMU with non-default settings. To use this block,
+        // plug one of the "new IMU.Parameters" blocks into the parameters socket.
+        imu.initialize(IMUParameter);
+        telemetry.addData("Status", "IMU Initialized");
+        telemetry.update();
+    }
 }
