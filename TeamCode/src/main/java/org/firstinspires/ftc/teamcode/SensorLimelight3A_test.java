@@ -85,12 +85,10 @@ public class SensorLimelight3A_test extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException
     {
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight = hardwareMap.get(Limelight3A.class, "limelightAsLimelight3A");
         imu_IMU = hardwareMap.get(IMU.class, "imu");
 
         telemetry.setMsTransmissionInterval(11);
-
-        limelight.pipelineSwitch(0);
 
         /*
          * Starts polling for data.  If you neglect to call start(), getLatestResult() will return null.
@@ -115,9 +113,79 @@ public class SensorLimelight3A_test extends LinearOpMode {
             double yaw = orientation.getYaw(AngleUnit.DEGREES);
             limelight.updateRobotOrientation(yaw);
 
+            getSamplePositionFromLimelight();
+
+            telemetry.update();
+        }
+        limelight.stop();
+    }
+
+    private void Init_IMU() {
+        IMU.Parameters IMUParameter;
+
+        // Create a Parameters object for use with an IMU in a REV Robotics Control Hub or
+        // Expansion Hub, specifying the hub's orientation on the robot via the direction that
+        // the REV Robotics logo is facing and the direction that the USB ports are facing.
+        IMUParameter = new IMU.Parameters(new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.UP, RevHubOrientationOnRobot.UsbFacingDirection.RIGHT));
+        // This will use IMU gyroscope and accelerometer
+        // to calculate the relative orientation of the hub and thus the robot
+        // Warn driver this make take several seconds
+        telemetry.addData("Status", "Init IMU .... Please Wait");
+        telemetry.update();
+        // Initialize IMU using parameter object
+        // Initialize the IMU with non-default settings. To use this block,
+        // plug one of the "new IMU.Parameters" blocks into the parameters socket.
+        imu_IMU.initialize(IMUParameter);
+        telemetry.addData("Status", "IMU Initialized");
+        telemetry.update();
+    }
+
+    private void getSamplePositionFromLimelight(){
+        limelight.pipelineSwitch(2); //pipeline 2 is Object Detector
+
+        while(true) {
             LLResult result = limelight.getLatestResult();
-            if (result != null) {
-                // Access general information
+
+            // Access detector results
+            List<LLResultTypes.DetectorResult> detectorResults = result.getDetectorResults();
+            if( detectorResults.size() > 0) {
+                for (LLResultTypes.DetectorResult dr : detectorResults) {
+                    telemetry.addData("Detector", "Class: %s, Area: %.4f", dr.getClassName(), dr.getTargetArea());
+
+                    double targetOffsetAngle_Vertical = dr.getTargetYDegrees(); //a2
+
+                    // distance from the center of the Limelight lens to the floor
+                    double limelightLensHeightInches = 4.0; //h1
+
+                    // distance from the target to the floor
+                    double goalHeightInches = 0.0; //h2
+
+                    double limelightMountAngleDegrees = 0.0; //a1 - we need to get this information
+                    double angleToGoalDegrees = limelightMountAngleDegrees + targetOffsetAngle_Vertical;
+
+                    double distanceFromLimelightToGoalInches = 12.0;
+                    //tan(a1+a2) = (h2-h1) / d
+
+                    telemetry.update();
+                    sleep(2000);
+
+                }
+            } else {
+                telemetry.addData ("Object not Detected", 1);
+                telemetry.update();
+            }
+        }
+
+    }
+
+
+
+    private void getAprilTagFromLimelight(int aprilTagNumber){
+        limelight.pipelineSwitch(0); //pipeline 0 is AprilTag
+
+        LLResult result = limelight.getLatestResult();
+        if (result != null) {
+            // Access general information
                 /*Pose3D botpose = result.getBotpose();
                 Pose3D botPose_MT2 = result.getBotpose_MT2();
 
@@ -127,7 +195,7 @@ public class SensorLimelight3A_test extends LinearOpMode {
                 telemetry.addData("LL Latency", captureLatency + targetingLatency);
                 telemetry.addData("Parse Latency", parseLatency);
                 telemetry.addData("PythonOutput", java.util.Arrays.toString(result.getPythonOutput()));
-                
+
                 if (result.isValid()) {
 
                     telemetry.addData("Botpose", botpose.toString());
@@ -159,56 +227,32 @@ public class SensorLimelight3A_test extends LinearOpMode {
 
                  */
 
-                    // Access fiducial results
-                    List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
-                    for (LLResultTypes.FiducialResult fr : fiducialResults) {
-                        telemetry.addData("Fiducial", "ID: %d, Family: %s, X: %.2f, Y: %.2f", fr.getFiducialId(), fr.getFamily(),fr.getTargetXDegrees(), fr.getTargetYDegrees());
-                        int id = fr.getFiducialId(); // The ID number of the fiducial
-                        double x = fr.getTargetXDegrees(); // Where it is (left-right)
-                        double y = fr.getTargetYDegrees(); // Where it is (up-down)
-                        Position pos_in_INCH2 = fr.getCameraPoseTargetSpace().getPosition().toUnit(DistanceUnit.INCH);
-                        double y_distance = pos_in_INCH2.y;
-                        double x_distance = pos_in_INCH2.x;
-                        double z_distance = pos_in_INCH2.z;
+            // Access fiducial results
+            List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
+            for (LLResultTypes.FiducialResult fr : fiducialResults) {
+                telemetry.addData("Fiducial", "ID: %d, Family: %s, X: %.2f, Y: %.2f", fr.getFiducialId(), fr.getFamily(),fr.getTargetXDegrees(), fr.getTargetYDegrees());
+                int id = fr.getFiducialId(); // The ID number of the fiducial
+                double x = fr.getTargetXDegrees(); // Where it is (left-right)
+                double y = fr.getTargetYDegrees(); // Where it is (up-down)
+                Position pos_in_INCH2 = fr.getCameraPoseTargetSpace().getPosition().toUnit(DistanceUnit.INCH);
+                double y_distance = pos_in_INCH2.y;
+                double x_distance = pos_in_INCH2.x;
+                double z_distance = pos_in_INCH2.z;
 
-                        telemetry.addLine("getCameraPoseTargetSpace");
-                        telemetry.addLine("XY " +
-                                JavaUtil.formatNumber(x_distance, 6, 1) + " " +
-                                JavaUtil.formatNumber(y_distance, 6, 1) + " "  +
-                                JavaUtil.formatNumber(z_distance, 6, 1) + " "  +"  (INCH)");
+                telemetry.addLine("getCameraPoseTargetSpace");
+                telemetry.addLine("XY " +
+                        JavaUtil.formatNumber(x_distance, 6, 1) + " " +
+                        JavaUtil.formatNumber(y_distance, 6, 1) + " "  +
+                        JavaUtil.formatNumber(z_distance, 6, 1) + " "  +"  (INCH)");
 
 
 
-                    }
-                    sleep(2000);
-
-                }
-            else {
-                telemetry.addData("Limelight", "No data available");
             }
+            sleep(2000);
 
-            telemetry.update();
         }
-        limelight.stop();
-    }
-
-    private void Init_IMU() {
-        IMU.Parameters IMUParameter;
-
-        // Create a Parameters object for use with an IMU in a REV Robotics Control Hub or
-        // Expansion Hub, specifying the hub's orientation on the robot via the direction that
-        // the REV Robotics logo is facing and the direction that the USB ports are facing.
-        IMUParameter = new IMU.Parameters(new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.UP, RevHubOrientationOnRobot.UsbFacingDirection.RIGHT));
-        // This will use IMU gyroscope and accelerometer
-        // to calculate the relative orientation of the hub and thus the robot
-        // Warn driver this make take several seconds
-        telemetry.addData("Status", "Init IMU .... Please Wait");
-        telemetry.update();
-        // Initialize IMU using parameter object
-        // Initialize the IMU with non-default settings. To use this block,
-        // plug one of the "new IMU.Parameters" blocks into the parameters socket.
-        imu_IMU.initialize(IMUParameter);
-        telemetry.addData("Status", "IMU Initialized");
-        telemetry.update();
+        else {
+            telemetry.addData("Limelight", "No data available");
+        }
     }
 }
