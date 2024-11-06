@@ -113,7 +113,8 @@ public class SensorLimelight3A_test extends LinearOpMode {
             double yaw = orientation.getYaw(AngleUnit.DEGREES);
             limelight.updateRobotOrientation(yaw);
 
-            getSamplePositionFromLimelight();
+            //getLimelightMountAngleDegrees();
+            getDistanceOfSample();
 
             telemetry.update();
         }
@@ -140,7 +141,61 @@ public class SensorLimelight3A_test extends LinearOpMode {
         telemetry.update();
     }
 
-    private void getSamplePositionFromLimelight(){
+    private void getDistanceOfSample(){
+        limelight.pipelineSwitch(2); //pipeline 2 is Object Detector
+
+        while(opModeIsActive()) {
+
+            LLResult result = limelight.getLatestResult();
+            List<LLResultTypes.DetectorResult> detectorResults = result.getDetectorResults();
+/*
+        int counter = 0;
+        while(detectorResults.size() <= 0) {
+            result = limelight.getLatestResult();
+            detectorResults = result.getDetectorResults();
+            counter++;
+
+            if(counter > 100){
+                break;
+            }
+        }
+
+ */
+
+            if (detectorResults.size() > 0) {
+                for (LLResultTypes.DetectorResult dr : detectorResults) {
+                    telemetry.addData("Detector", "Class: %s, Area: %.4f", dr.getClassName(), dr.getTargetArea());
+                    //tan(a1+a2) = (h2-h1) / d
+
+                    //double limeLightMountAngleRad = Math.toRadians(-21.422750); //a1
+                    double limeLightMountAngleRad = -0.374708; //a1
+
+                    double targetOffsetAngle_Vertical = dr.getTargetYDegrees(); //a2 in deg
+                    double targetOffSetAngle_VerticalRaD = Math.toRadians(targetOffsetAngle_Vertical);
+                    // distance from the center of the Limelight lens to the floor
+                    double limelightLensHeightInches = 4.0; //h1
+
+                    // distance from the target to the floor
+                    double goalHeightInches = 0.0; //h2
+
+                    double angleGoalRadians = limeLightMountAngleRad + targetOffSetAngle_VerticalRaD;
+
+                    double distFromLimelightToSampleInches = (goalHeightInches - limelightLensHeightInches) / Math.tan(angleGoalRadians);
+
+                    telemetry.addData("distFromLimelightToSampleInches ", "%.2f", distFromLimelightToSampleInches);
+
+                    telemetry.update();
+                    sleep(2000);
+                }
+
+            } else {
+                telemetry.addData("Object not Detected", 1);
+                telemetry.update();
+            }
+        }
+    }
+
+    private void getLimelightMountAngleDegrees(){
         limelight.pipelineSwitch(2); //pipeline 2 is Object Detector
 
         while(true) {
@@ -151,8 +206,15 @@ public class SensorLimelight3A_test extends LinearOpMode {
             if( detectorResults.size() > 0) {
                 for (LLResultTypes.DetectorResult dr : detectorResults) {
                     telemetry.addData("Detector", "Class: %s, Area: %.4f", dr.getClassName(), dr.getTargetArea());
+                    //tan(a1+a2) = (h2-h1) / d
 
                     double targetOffsetAngle_Vertical = dr.getTargetYDegrees(); //a2
+                    //double targetOffSetAngle_VerticalRaD = targetOffsetAngle_Vertical * ( 3.14159/180);
+                    double targetOffSetAngle_VerticalRaD = Math.toRadians(targetOffsetAngle_Vertical);
+                    //we will have to calculate a1 i.e. limelightMountAngleDegrees
+                    /*
+                     a1 =   invTan((h2-h1) / d)−a2
+                     */
 
                     // distance from the center of the Limelight lens to the floor
                     double limelightLensHeightInches = 4.0; //h1
@@ -163,18 +225,26 @@ public class SensorLimelight3A_test extends LinearOpMode {
                     double limelightMountAngleDegrees = 0.0; //a1 - we need to get this information
                     double angleToGoalDegrees = limelightMountAngleDegrees + targetOffsetAngle_Vertical;
 
-                    double distanceFromLimelightToGoalInches = 12.0;
-                    //tan(a1+a2) = (h2-h1) / d
+                    double distanceFromLimelightToGoalInches = 12.0; //d
+
+                    //a1 is in radians
+                     double a1 = (Math.atan((goalHeightInches-limelightLensHeightInches)/distanceFromLimelightToGoalInches)) - targetOffSetAngle_VerticalRaD;
+                     telemetry.addData("LimeLight MountAngle in RAD ", "%.6f", a1);
+
+                     //double a1InDegree = a1 * (180.0/3.14159);
+                    double a1InDegree = Math.toDegrees(a1);
+                    telemetry.addData("LimeLight MountAngle in DEG ", "%.6f", a1InDegree);
 
                     telemetry.update();
                     sleep(2000);
 
 
                 }
-            } else {
+            } /*else {
                 telemetry.addData ("Object not Detected", 1);
                 telemetry.update();
-            }
+            } */
+
         }
 
     }
